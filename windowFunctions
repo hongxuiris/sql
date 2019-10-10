@@ -1,0 +1,92 @@
+#https://www.youtube.com/watch?v=H6OTMoXjNiM&list=PLgR-BOYibnN0QqIPFbMlS01bw8x9g07Ll
+
+# window functions are used to perform data analysis calculations
+# window: the sets of rows
+
+# Functions
+# aggegate: count, sum, avg, min, max
+# offset: first_value, last_value, lead, lag
+# statistical: percent_rank, cume_dist, pecentile_count, percentile_disc
+
+# 1, you have sales detailed table, you want to return the sales details as welll as the total amount 
+# without window function
+with cte as (select Sales_Id, sum(Line_Total) as Total from Sales_Details group by Sales_Id)
+select * from cte as A inner join Sales_Details as B on A.Sales_Id = B.Sales_Id
+
+# with window function
+select Sales_Id, Sales_Date, Item, Price, Quantity, Line_Total,
+count(Line_Total) over(partition by Sale_Id) as Line_Count,
+sum(Line_Total) over (partition by Sales_Id) as Sales_Total,
+sum(Line_Total) over (partition by Sales_Date) as Daily_Total,
+sum(Line_Total) over() as Total --grand total
+from Sale_Details
+order by Sales_Total
+
+# window functions -- ranking
+#row_number: unique incrementing integers
+#rank: same rank for same values (if there is a tie, skip the next number)
+#dense_rank: same rank for same values (if there is a tie, do not skip numbers)
+ntile: assigns tile numbers based on number of tiles requested
+
+# want to return the amount of sales ordered by the most amount this customer has spend
+select Sales_Id, Sales_Cust_Id, Sales_Total, 
+row_number()  over(partition by Sales_Cust_Id order by Sales_Total desc) as rownum,
+rank() over(partition by Sales_Cust_Id order by Sales_Total desc) as rnk,
+dense_rank() over(partition by Sales_Cust_Id order by Sales_Total desc) as dense,
+ntile(3) over(partition by Sales_Cust_Id order by Sales_Total desc) as ntle -- ntile() needs a parameter
+# ntile(n) divid the data into evenly distributed n tiles, useful if you want to generate sample data
+from Sales_2 
+order by Sales_Cust_Id
+
+#window functions --ranking (group by)
+#scenario: we want to return a ranking of customers by how much they have spent
+select 
+Sales_Cust_Id,
+sum(Sales_Total) as Total
+rank() over(order by sum(Sales_Total) desc) as rnk,
+dense_rank() over(order by sum(Sales_Total) desc) as dense
+from Sales_2
+where Sales_Date >= '20170124'
+group by Sales_Cust_Id
+order by rnk
+
+# window functions -- calculate running totals/averages
+# a window frame is a filtered portion of each partition, the units available are rows and range
+#preceeding
+#current
+#following
+# if I want to create a window of the current row and one row behind that current row, use preceeding
+# uncounded preceding means your frame will be constantly changing, it will take the current row and all previous rwos into consideration
+# to see whether a customer increase his/her spend
+
+select
+Sales_Id, Sales_Date, Sales_Total, Sales_Cust_Id
+sum(Sales_Total) over(partition by Sales_Cust_Id order by Sales_Date ROWS between unbounded preceding and CURRENT ROW) as [Running Total],
+sum(Sales_Total) over(partition by Sales_Cust_Id order by Sales_Date ROWS unbounded preceding) as [Running Total], -- the same as last line
+sum(Sales_Total) over(partition by Sales_Cust_Id order by Sales_Date ROWS between 1 preceding and CURRENT ROW) as [Running Total2], -- current row + one row previously
+cast(avg(Sales_Total) over(partition by Sales_Cust_Id order by Sales_Date ROWS unbounded preceding) as decimal(8,2)) as [Running Average]
+from Sale_2
+order by Sales_Cust_Id
+
+# window functions -- Lag and lead
+# useful for trend analysis
+# lag: return value from previous row
+# lead: return value from next row
+
+select 
+from Sales
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
