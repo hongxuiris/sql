@@ -72,11 +72,16 @@ order by Sales_Cust_Id
 # useful for trend analysis
 # lag: return value from previous row
 # lead: return value from next row
+# lag and lead accept multiple parameters, offset by n, replace nulls by (0)
 
 select 
+Sales_Cust_Id, Sales_Date, 
+lag(Sales_Amount,2, 0) over(partition by Sales_Cust_Id order by Sales_Date) as PrevValue,
+Sales_Amount,
+lead(Sales_Amount, 2, 0) over(partition by Sales_Cust_Id order by Sales_Date) as NextValue
 from Sales
 
-
+# creating a sample of data #7
 
 
 
