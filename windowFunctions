@@ -8,7 +8,7 @@
 # offset: first_value, last_value, lead, lag
 # statistical: percent_rank, cume_dist, pecentile_count, percentile_disc
 
-# 1, you have sales detailed table, you want to return the sales details as welll as the total amount 
+# 1, you have sales detailed table, you want to return the sales details as well as the total amount 
 # without window function
 with cte as (select Sales_Id, sum(Line_Total) as Total from Sales_Details group by Sales_Id)
 select * from cte as A inner join Sales_Details as B on A.Sales_Id = B.Sales_Id
@@ -56,7 +56,7 @@ order by rnk
 #current
 #following
 # if I want to create a window of the current row and one row behind that current row, use preceeding
-# uncounded preceding means your frame will be constantly changing, it will take the current row and all previous rwos into consideration
+# unbounded preceding means your frame will be constantly changing, it will take the current row and all previous rows into consideration
 # to see whether a customer increase his/her spend
 
 select
@@ -82,13 +82,89 @@ lead(Sales_Amount, 2, 0) over(partition by Sales_Cust_Id order by Sales_Date) as
 from Sales
 
 # creating a sample of data #7
+select top(1000) customerId, FirstName, middleName, lastName from dbo.Customer; # with top() it's not really getting a random data set
+
+# ntile(n)  # n: number of tiles
+# nested CTEs
+# aggregate functions
+
+with Number as 
+(select CustomerId, NTILE(1000) over(order by CustomerId) as N from dbo.Customers), 
+# a second CTE which is a nested CTE
+TopCustomer as 
+(select max(CustomerId) as CustId from Number groupb by N)
+
+select C2.* into dbo.CustomerSample
+from TopCustomer as C1 inner join dbo.Customer as C2
+on C1.custId = C2.CustomerId
+
+## window functions -- calculating running differences #8
+# analysing customer spend - are customers spending more or less with each purchase
+# calculate the running differences
+# identifying target customers -- which customers are increasing their spend over time
+# calculate the average running difference
+
+# what's going to cover?
+# window functions using lag to return previous value
+# CTE - common table expressions
+# aggregate functions - average
+
+with CTE as 
+(
+select Sales_Customer_Id, Sales_date, Sales_Amount, 
+LAG(Sales_Amount) over(partition by Sales_Customer_Id order by Sales_Date) as PrevValue,
+Sales_Amount - LAG(Sales_Amount) over(partition by Sales_Customer_Id order by Sales_Date) as RunningDifference
+from dbo.Sales
+)
+select Sales_Customer_Id, AVG(RunningDifference) as AverageDifference from CTE
+group by Sales_Customer_Id order by AverageDifference DESC;
+
+# target customers have high AverageDifference to send vouches, etc
+# also work with the low AverageDifference customers to  have them spend more
 
 
+### show totals with Group By  #9
+select Sales_Customer_Id, 
+sum(Sales_Amount) as Cust_total,
+sum(sum(Sales_Amount)) as Grand_Total # error: can't perform an aggregate function already on an aggregate function
+from dbo.Sales GROUP BY Sales_Customer_Id
 
+# solution : over clause
+select Sales_Customer_Id, 
+sum(Sales_Amount) as Cust_total,
+sum(sum(Sales_Amount)) over(order by (select NULL)) as Ground_Total,  
+avg(sum(Sales_Amount)) over(order by (select NULL)) as Average_Cust_Total,
+cast((sum(Sales_Amount) / sum(sum(Sales_Amount)) over(order by (select NULL))) * 100 AS DECIMAL(6,2)) as Pct
+from dbo.Sales 
+GROUP BY Sales_Customer_Id
 
+### how to calculate rolling totals #10
+# calculate a total for the last 30 days rolling window
 
+select [Date], sum(SalesAmount) as SalesAmount
+INTO #TempSales
+from dbo.FactSales as Fact 
+inner join dbo.DimDate as Dt
+on Fact.DateKey = Dt.DateKey
+group by [Date]
+order by [Date]
 
+### create a running total, each total is the value added to all of its previous values
+select
+    *,
+    sum(SalesAmount) over(order by [Date]) as Total,  
+    sum(SalesAmount) over(order by [Date] ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as Total # the same as the above line
+from #TempSales
+order by [Date]
 
+### have a rolling window of 10 (rolling back)
+select
+    *,
+    sum(SalesAmount) over(order by [Date] ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)) as Total
+from #TempSales
+order by [Date]
+
+### have a rolling window of 10 (current and the future)
 
 
 
