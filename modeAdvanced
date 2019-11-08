@@ -101,21 +101,71 @@ SELECT cleaned_date,
 
 
 -- Write a query that counts the number of incidents reported by week. Cast the week as a date to get rid of the hours/minutes/seconds.
+SELECT date_trunc('week', cleaned_date)::date as week,
+      count(incidnt_num) as incident_count
+  FROM tutorial.sf_crime_incidents_cleandate 
+  group by 1
+  order by 1
+
+-- Write a query that shows exactly how long ago each indicent was reported. Assume that the dataset is in Pacific Standard Time
+SELECT incidnt_num, cleaned_date,
+now() at time zone 'PST' as now,
+now() at time zone 'PST' - cleaned_date as time_ago
+FROM tutorial.sf_crime_incidents_cleandate 
+
+-- use COALESCE to replace the null values
+SELECT incidnt_num,
+       descript,
+       COALESCE(descript, 'No Description')
+  FROM tutorial.sf_crime_incidents_cleandate
+ ORDER BY descript DESC
 
 
+-- subquery
+
+-- Write a query that selects all Warrant Arrests from the tutorial.sf_crime_incidents_2014_01 dataset, then wrap it in an outer 
+-- query that only displays unresolved incidents.
+
+    SELECT sub.*
+      FROM (
+            SELECT *
+              FROM tutorial.sf_crime_incidents_2014_01
+             WHERE descript = 'WARRANT ARREST'
+           ) sub
+     WHERE sub.resolution = 'NONE'
 
 
+-- Write a query that displays the average number of monthly incidents for each category.
+SELECT sub.category,
+       AVG(sub.incidents) AS avg_incidents_per_month
+  FROM (
+        SELECT EXTRACT('month' FROM cleaned_date) AS month,
+               category,
+               COUNT(1) AS incidents
+          FROM tutorial.sf_crime_incidents_cleandate
+         GROUP BY 1,2
+       ) sub
+ GROUP BY 1
 
 
+-- Write a query that displays all rows from the three categories with the fewest incidents reported.
+select t1.*, sub.incidents as incidents from tutorial.sf_crime_incidents_2014_01 as t1 join 
+(select  category,
+       count(incidnt_num) as incidents
+       from tutorial.sf_crime_incidents_2014_01
+       group by 1
+       order by incidents limit 3) sub
+on t1.category=sub.category
 
 
-
-
-
-
-
-
-
+-- aggregate all of the companies receiving investment and companies acquired each month. 
+SELECT COALESCE(acquisitions.acquired_month, investments.funded_month) AS month,
+       COUNT(DISTINCT acquisitions.company_permalink) AS companies_acquired,
+       COUNT(DISTINCT investments.company_permalink) AS investments
+  FROM tutorial.crunchbase_acquisitions acquisitions
+  FULL JOIN tutorial.crunchbase_investments investments
+    ON acquisitions.acquired_month = investments.funded_month
+ GROUP BY 1
 
   
   
