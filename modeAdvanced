@@ -1,0 +1,128 @@
+
+https://mode.com/sql-tutorial/sql-data-types
+
+-- Convert the funding_total_usd and founded_at_clean columns in the tutorial.crunchbase_companies_clean_date table to strings 
+-- (varchar format) using a different formatting function for each one.
+
+select cast(funding_total_usd as varchar) as funding_total_usd, founded_at_clean::varchar as founded_at_clean
+from tutorial.crunchbase_companies_clean_date
+
+
+
+-- Write a query that counts the number of companies acquired within 3 years, 5 years, and 10 years of being founded (in 3 separate 
+-- columns). Include a column for total companies acquired as well. Group by category and limit to only rows with a founding date.
+
+select category_code,
+      count(case when acquisitions.acquired_at_cleaned <= companies.founded_at_clean::timestamp + interval '3 YEARS' then 1 else NULL end) as acquired_3years,
+      sum(case when acquisitions.acquired_at_cleaned <= companies.founded_at_clean::timestamp + interval '5 years' then 1 else 0 end) as acquired_5years,
+      sum(case when acquisitions.acquired_at_cleaned <= companies.founded_at_clean::timestamp + interval '10 years' then 1 else 0 end) as acquired_10years,
+      sum(1) as total      
+      from tutorial.crunchbase_companies_clean_date companies inner join 
+         tutorial.crunchbase_acquisitions_clean_date acquisitions 
+         on companies.permalink = acquisitions.company_permalink
+         where companies.founded_at_clean is not NULL         
+         group by 1 order by total desc
+         
+         
+                  
+--    LEFT, RIGHT, and LENGTH, TRIM    
+         
+ SELECT incidnt_num,
+       date,
+       LEFT(date, 10) AS cleaned_date,
+       RIGHT(date, 17) AS cleaned_time, 
+       RIGHT(date, LENGTH(date) - 11) AS cleaned_time,
+       TRIM(both '()' FROM location),
+       POSITION('A' IN descript) AS a_position,
+       STRPOS(descript, 'A') AS a_position,
+       SUBSTR(date, 4, 2) AS day
+  FROM tutorial.sf_crime_incidents_2014_01        
+         
+         
+-- Write a query that separates the `location` field into separate fields for latitude and longitude. 
+-- (37.709725805163, -122.413623946206)
+  SELECT location,
+       trim(leading '(' from left(location, position(',' in location)-1)) as lat,
+       trim(trailing ')' from right(location, length(location)-strpos(location, ','))) as lon
+FROM tutorial.sf_crime_incidents_2014_01 
+  
+  
+--  Concatenate the lat and lon fields to form a field that is equivalent to the location field.
+SELECT location,
+        concat('(', lon, ', ', lat, ')') as location2,
+        '(' || lon || ', '|| lat || ')' as location3 
+FROM tutorial.sf_crime_incidents_2014_01 limit 10 
+  
+--Write a query that creates a date column formatted YYYY-MM-DD.
+SELECT date, 
+      concat(substr(date, 7, 4), '-', substr(date, 1, 2), '-', substr(date, 4, 2)) as date1,
+      substr(date, 7, 4) || '-' || substr(date, 1, 2) || '-' || substr(date, 4, 2) as date2
+FROM tutorial.sf_crime_incidents_2014_01
+
+
+-- Write a query that returns the `category` field, but with the first letter capitalized and the rest of the letters in lower-case.
+SELECT category, 
+      upper(left(category,1)) || lower(substr(category, 2, length(category)-1)) as category2 
+FROM tutorial.sf_crime_incidents_2014_01 
+
+
+-- Write a query that creates an accurate timestamp using the date and time columns in tutorial.sf_crime_incidents_2014_01. 
+-- Include a field that is exactly 1 week later as well
+SELECT date, time,
+      (SUBSTR(date, 7, 4) || '-' || LEFT(date, 2) ||
+        '-' || SUBSTR(date, 4, 2) || ' ' || time || ':00')::timestamp AS timestamp,
+      concat(left(date, 10), ' ', time)::timestamp + interval '1 week' as plus_one_week
+FROM tutorial.sf_crime_incidents_2014_01 
+
+
+SELECT cleaned_date,
+       EXTRACT('year'   FROM cleaned_date) AS year,
+       EXTRACT('month'  FROM cleaned_date) AS month,
+       EXTRACT('day'    FROM cleaned_date) AS day,
+       EXTRACT('hour'   FROM cleaned_date) AS hour,
+       EXTRACT('minute' FROM cleaned_date) AS minute,
+       EXTRACT('second' FROM cleaned_date) AS second,
+       EXTRACT('decade' FROM cleaned_date) AS decade,
+       EXTRACT('dow'    FROM cleaned_date) AS day_of_week
+  FROM tutorial.sf_crime_incidents_cleandate
+  
+  
+ SELECT cleaned_date,
+       DATE_TRUNC('year'   , cleaned_date) AS year,
+       DATE_TRUNC('month'  , cleaned_date) AS month,
+       DATE_TRUNC('week'   , cleaned_date) AS week,
+       DATE_TRUNC('day'    , cleaned_date) AS day,
+       DATE_TRUNC('hour'   , cleaned_date) AS hour,
+       DATE_TRUNC('minute' , cleaned_date) AS minute,
+       DATE_TRUNC('second' , cleaned_date) AS second,
+       DATE_TRUNC('decade' , cleaned_date) AS decade
+  FROM tutorial.sf_crime_incidents_cleandate
+
+
+
+-- Write a query that counts the number of incidents reported by week. Cast the week as a date to get rid of the hours/minutes/seconds.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+         
